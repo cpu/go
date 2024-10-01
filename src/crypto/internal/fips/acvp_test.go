@@ -23,6 +23,7 @@ import (
 	"crypto/internal/fips"
 	"crypto/internal/fips/hmac"
 	"crypto/internal/fips/sha256"
+	"crypto/internal/fips/sha3"
 	"crypto/internal/fips/sha512"
 	"encoding/binary"
 	"encoding/json"
@@ -79,6 +80,7 @@ var (
 		hashCapability("SHA2-384"),
 		hashCapability("SHA2-512"),
 		hashCapability("SHA2-512/256"),
+		hashCapabilityRev2("SHA3-256"),
 
 		// HMAC algorithm capabilities
 		// See https://pages.nist.gov/ACVP/draft-fussell-acvp-mac.html#section-7
@@ -92,18 +94,18 @@ var (
 	// commands should reflect what config says we support. E.g. adding a command here will be a NOP
 	// unless the configuration indicates the command's associated algorithm is supported.
 	commands = map[string]command{
-		"getConfig":        cmdGetConfig(),
-		"SHA2-224":         cmdHashAft(sha256.New224()),
-		"SHA2-224/MCT":     cmdHashMct(sha256.New224()),
-		"SHA2-256":         cmdHashAft(sha256.New()),
-		"SHA2-256/MCT":     cmdHashMct(sha256.New()),
-		"SHA2-384":         cmdHashAft(sha512.New384()),
-		"SHA2-384/MCT":     cmdHashMct(sha512.New384()),
-		"SHA2-512":         cmdHashAft(sha512.New()),
-		"SHA2-512/MCT":     cmdHashMct(sha512.New()),
-		"SHA2-512/256":     cmdHashAft(sha512.New512_256()),
-		"SHA2-512/256/MCT": cmdHashMct(sha512.New512_256()),
-
+		"getConfig":         cmdGetConfig(),
+		"SHA2-224":          cmdHashAft(sha256.New224()),
+		"SHA2-224/MCT":      cmdHashMct(sha256.New224()),
+		"SHA2-256":          cmdHashAft(sha256.New()),
+		"SHA2-256/MCT":      cmdHashMct(sha256.New()),
+		"SHA2-384":          cmdHashAft(sha512.New384()),
+		"SHA2-384/MCT":      cmdHashMct(sha512.New384()),
+		"SHA2-512":          cmdHashAft(sha512.New()),
+		"SHA2-512/MCT":      cmdHashMct(sha512.New()),
+		"SHA2-512/256":      cmdHashAft(sha512.New512_256()),
+		"SHA2-512/256/MCT":  cmdHashMct(sha512.New512_256()),
+		"SHA3-256":          cmdHashAft(sha3.New256()),
 		"HMAC-SHA2-224":     cmdHmacAft(sha256.New224(), sha256.New224()),
 		"HMAC-SHA2-256":     cmdHmacAft(sha256.New(), sha256.New()),
 		"HMAC-SHA2-384":     cmdHmacAft(sha512.New384(), sha512.New384()),
@@ -117,6 +119,16 @@ func hashCapability(algName string) map[string]interface{} {
 		"algorithm": algName,
 		"revision":  "1.0",
 		// Matching BSSL's config:
+		"messageLength": []map[string]int{{
+			"min": 0, "max": 65528, "increment": 8,
+		}},
+	}
+}
+
+func hashCapabilityRev2(algName string) map[string]interface{} {
+	return map[string]interface{}{
+		"algorithm": algName,
+		"revision":  "2.0",
 		"messageLength": []map[string]int{{
 			"min": 0, "max": 65528, "increment": 8,
 		}},
