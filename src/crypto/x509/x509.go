@@ -1165,7 +1165,7 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 // Deprecated: Use [RevocationList.CheckSignatureFrom] instead.
 func (c *Certificate) CheckCRLSignature(crl *pkix.CertificateList) error {
 	algo := getSignatureAlgorithmFromAI(crl.SignatureAlgorithm)
-	return c.CheckSignature(algo, crl.TBSCertList.Raw, crl.SignatureValue.RightAlign())
+	return c.CheckSignature(algo, crl.TBSCertList.Raw, crl.SignatureValue.Bytes)
 }
 
 type UnhandledCriticalExtension struct{}
@@ -2387,7 +2387,7 @@ func parseCertificateRequest(in *certificateRequest) (*CertificateRequest, error
 		RawSubject:               in.TBSCSR.Subject.FullBytes,
 		RawSignatureAlgorithm:    in.SignatureAlgorithm.Raw,
 
-		Signature: in.SignatureValue.RightAlign(),
+		Signature: in.SignatureValue.Bytes,
 		SignatureAlgorithm: getSignatureAlgorithmFromAI(pkix.AlgorithmIdentifier{
 			Algorithm:  in.SignatureAlgorithm.Algorithm,
 			Parameters: in.SignatureAlgorithm.Parameters,

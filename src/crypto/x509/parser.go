@@ -310,7 +310,10 @@ func parseExtension(der cryptobyte.String) (pkix.Extension, error) {
 func parsePublicKey(keyData *publicKeyInfo) (any, error) {
 	oid := keyData.Algorithm.Algorithm
 	params := keyData.Algorithm.Parameters
-	data := keyData.PublicKey.RightAlign()
+	if keyData.PublicKey.BitLength%8 != 0 {
+		return nil, errors.New("x509: malformed public key info")
+	}
+	data := keyData.PublicKey.Bytes
 	switch {
 	case oid.Equal(oidPublicKeyRSA):
 		// RSA public keys must have a NULL in the parameters.
@@ -1155,11 +1158,9 @@ func parseCertificate(der []byte) (*Certificate, error) {
 		}
 	}
 
-	var signature asn1.BitString
-	if !input.ReadASN1BitString(&signature) {
+	if !input.ReadASN1BitStringAsBytes(&cert.Signature) {
 		return nil, errors.New("x509: malformed signature")
 	}
-	cert.Signature = signature.RightAlign()
 
 	return cert, nil
 }
@@ -1262,11 +1263,9 @@ func ParseRevocationList(der []byte) (*RevocationList, error) {
 	}
 	rl.SignatureAlgorithm = getSignatureAlgorithmFromAI(sigAI)
 
-	var signature asn1.BitString
-	if !input.ReadASN1BitString(&signature) {
+	if !input.ReadASN1BitStringAsBytes(&rl.Signature) {
 		return nil, errors.New("x509: malformed signature")
 	}
-	rl.Signature = signature.RightAlign()
 
 	var issuerSeq cryptobyte.String
 	if !tbs.ReadASN1Element(&issuerSeq, cryptobyte_asn1.SEQUENCE) {

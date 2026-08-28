@@ -11,6 +11,7 @@ import (
 	"crypto/rand"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/hex"
 	"encoding/pem"
 	"os"
 	"reflect"
@@ -422,4 +423,42 @@ OjUhiZoowYvborSS1EBK
 	if !bytes.Equal(got, cert.RawSubject) {
 		t.Errorf("unexpected marshaled RDNSequence: got %x, want %x", got, cert.RawSubject)
 	}
+}
+
+func TestParseNotWholeBitString(t *testing.T) {
+	t.Run("certificate signature", func(t *testing.T) {
+		x, err := hex.DecodeString("308201183081bea00302010202143fc3c77f6b826fc1952e5762bccd1b848d51a174300a06082a8648ce3d0403023000301e170d3236303832383135343431365a170d3236303832383135343431365a30003059301306072a8648ce3d020106082a8648ce3d03010703420004116818a9f92776d02cc21cbe60e7658855e31ea49784afe7fe84107114a803cc769bdb239ec99b0ad77b465450990823fb95764ec34ec199a58fffdea0602ebda316301430120603551d110101ff04083006820474657374300a06082a8648ce3d0403020349013046022100829d534dd07f3132a4f17eed55826e101e7402ff7e9496c287bf0b0ba16c8e6d022100d37a66c856e10b7f6c30b78f683eb6647edd5c10edc4fd84df402551d8097dde")
+		if err != nil {
+			t.Fatal(err)
+		}
+		expectedSigErr := "x509: malformed signature"
+		_, err = ParseCertificate(x)
+		if err == nil || err.Error() != expectedSigErr {
+			t.Fatalf("ParseCertificate expected %q but got %v", expectedSigErr, err)
+		}
+	})
+
+	t.Run("crl signature", func(t *testing.T) {
+		x, err := hex.DecodeString("30819a3042020101300a06082a8648ce3d0403023000180f30303031303130313030303030305aa01e301c300e0603551d23040730058003010203300a0603551d140403020101300a06082a8648ce3d040302034801304502201ca0d636561755f3688627fe2b862bd343e7c29b1223978646b6665b402282250221008ea0cdc3ce7ec775be925a44cebff80d183f239b5bc656f81a4bcb4a09566a26")
+		if err != nil {
+			t.Fatal(err)
+		}
+		expectedSigErr := "x509: malformed signature"
+		_, err = ParseRevocationList(x)
+		if err == nil || err.Error() != expectedSigErr {
+			t.Fatalf("ParseCertificateRequest expected %q but got %v", expectedSigErr, err)
+		}
+	})
+
+	t.Run("publicKeyInfo", func(t *testing.T) {
+		pki := publicKeyInfo{
+			Algorithm: pkix.AlgorithmIdentifier{Algorithm: asn1.ObjectIdentifier{1, 2, 3}},
+			PublicKey: asn1.BitString{Bytes: []byte{1}, BitLength: 1},
+		}
+		_, err := parsePublicKey(&pki)
+		expectedErr := "x509: malformed public key info"
+		if err == nil || err.Error() != expectedErr {
+			t.Fatalf("parsePublicKey expected %q but got %v", expectedErr, err)
+		}
+	})
 }
