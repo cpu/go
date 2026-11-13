@@ -427,6 +427,17 @@ func (c *Conn) loadSession(hello *clientHelloMsg) (
 			c.config.ClientSessionCache.Put(cacheKey, nil)
 			return nil, nil, nil, nil
 		}
+		// Check revocation before offering resumption. If the cached
+		// certificate is now revoked, delete the entry and perform a full
+		// handshake so the server has an opportunity to present a
+		// replacement.
+		if err := c.config.checkUPKIRevocation(session.verifiedChains); err != nil {
+			if errors.Is(err, ErrUPKIRevoked) {
+				c.config.ClientSessionCache.Put(cacheKey, nil)
+			}
+
+			return nil, nil, nil, nil
+		}
 	}
 
 	if session.version != VersionTLS13 {
@@ -1193,6 +1204,11 @@ func (c *Conn) verifyServerCertificate(certificates [][]byte) error {
 	}
 
 	c.peerCertificates = certs
+	if !echRejected {
+		if err := c.verifyUPKIRevocation(); err != nil {
+			return err
+		}
+	}
 
 	if c.config.VerifyPeerCertificate != nil && !echRejected {
 		if err := c.config.VerifyPeerCertificate(certificates, c.verifiedChains); err != nil {
