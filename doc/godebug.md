@@ -183,6 +183,15 @@ Go 1.28 and all future releases will support both the old and new
 encodings when reading data. This setting may be removed in a future Go release,
 Go 1.34 at the earliest.
 
+Go 1.28 added checking of server certificates against a local UPKI
+revocation cache to [`crypto/tls`](/pkg/crypto/tls) clients. The checks
+are on by default whenever a platform cache is present, and reject
+certificates the cache reports as revoked. The `tlsupki` setting controls
+the checks for programs that rely on the platform-default cache. It does
+not affect a [`crypto/tls.Config`](/pkg/crypto/tls#Config) that names a
+cache directory explicitly. Setting `tlsupki=0` disables them. The
+default, `tlsupki=1`, enables them.
+
 ### Go 1.27
 
 Go 1.27 removed the `gotypesalias` setting, as noted in the [Go 1.22](#go-122) section.
